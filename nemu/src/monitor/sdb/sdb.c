@@ -18,6 +18,7 @@
 #include <readline/readline.h>
 #include <readline/history.h>
 #include "sdb.h"
+#include <memory/paddr.h>
 
 static int is_batch_mode = false;
 
@@ -54,6 +55,18 @@ static int cmd_q(char *args) {
 
 static int cmd_help(char *args);
 
+static int cmd_si(char *args);
+
+static int cmd_info(char *args);
+
+static int cmd_x(char *args);
+
+static int cmd_p(char *args);
+
+static int cmd_w(char *args);
+
+static int cmd_d(char *args);
+
 static struct {
   const char *name;
   const char *description;
@@ -62,7 +75,12 @@ static struct {
   { "help", "Display information about all supported commands", cmd_help },
   { "c", "Continue the execution of the program", cmd_c },
   { "q", "Exit NEMU", cmd_q },
-
+  {"si", "Step one instruction exactly", cmd_si},
+  {"info", "Print program status.\n\tinfo r\t\tprint registers' info\n\tinfo w\t\tprint watchpoints' info", cmd_info},
+  {"x", "Scan memory", cmd_x},
+  {"p", "Print value of expression", cmd_p},
+  {"w", "Set watchpoint", cmd_w},
+  {"d", "Delete watchpoint", cmd_d},
   /* TODO: Add more commands */
 
 };
@@ -89,6 +107,106 @@ static int cmd_help(char *args) {
     }
     printf("Unknown command '%s'\n", arg);
   }
+  return 0;
+}
+
+static int cmd_si(char *args) {
+  /* extract the first argument */
+  char *arg = strtok(NULL, " ");
+
+  if (arg == NULL) {
+    // exec one command
+    cpu_exec(1);
+  } else {
+    for(int i = 0; i < strlen(arg); i++) {
+      if(arg[i] < '0' || arg[i] > '9') {
+        // syntax error: invalid argument
+        printf("Invalid argument '%s'\n", arg);
+        return 0;
+      }
+    }
+    // transform the string to int
+    int n = atoi(arg);
+    // examine the syntax
+    if((arg = strtok(NULL, " ")) != NULL) {
+      // syntax error: too many arguments
+      printf("A syntax error in expression: too many arguments\n");
+    } else {
+      // exec n commands
+      cpu_exec(n);
+    }
+  }
+  return 0;
+}
+
+static int cmd_info(char *args) {
+  /* extract the first argument */
+  char *arg = strtok(NULL, " ");
+
+  if (arg == NULL) {
+    // syntax error: no argument
+    printf("%s - %s\n", cmd_table[4].name, cmd_table[4].description);
+  } else if (strcmp(arg, "r") == 0) {
+    // print the registers
+    isa_reg_display();
+  } else if (strcmp(arg, "w") == 0) {
+    // print the watchpoints
+  }
+  return 0;
+}
+
+static int cmd_x(char *args) {
+  /* extract the first argument */
+  char *arg = strtok(NULL, " ");
+
+  if (arg == NULL) {
+    // syntax error: no argument
+    printf("%s - %s\n", cmd_table[5].name, cmd_table[5].description);
+  } else {
+    // test the first argument
+    for(int i = 0; i < strlen(arg); i++) {
+      if(arg[i] < '0' || arg[i] > '9') {
+        // syntax error: invalid argument
+        printf("Invalid argument '%s'\n", arg);
+        return 0;
+      }
+    }
+    // transform the string to int
+    word_t n = strtoul(arg, NULL, 10);
+    // test the second argument
+    // the second argument should be an expression
+    // assume that the format is 0x????????
+    char *exp = strtok(NULL, " ");
+      // transform the expression to a number
+      // bool success = true;
+      // word_t addr = expr(exp, &success);
+    word_t mem_data = 0, addr = 0;
+    sscanf(exp, "0x%x", &addr);
+    for(int i = 0; i < n; i++) {
+      // print the memory
+      mem_data = paddr_read(addr, 4);
+      printf("0x%.8x: 0x%.8x\n", addr, mem_data);
+      addr += 4;
+    }
+  }
+  return 0;
+}
+
+static int cmd_p(char *args) {
+  /* extract the first argument */
+  // char *arg = strtok(NULL, " ");
+  return 0;
+}
+
+static int cmd_w(char *args) {
+  /* extract the first argument */
+  // char *arg = strtok(NULL, " ");
+  return 0;
+}
+
+static int cmd_d(char *args) {
+  /* extract the first argument */
+  // char *arg = strtok(NULL, " ");
   return 0;
 }
 
