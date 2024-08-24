@@ -18,6 +18,7 @@
 #include <readline/readline.h>
 #include <readline/history.h>
 #include "sdb.h"
+#include "debug.h"
 #include <memory/paddr.h>
 
 static int is_batch_mode = false;
@@ -142,15 +143,16 @@ static int cmd_si(char *args) {
 static int cmd_info(char *args) {
   /* extract the first argument */
   char *arg = strtok(NULL, " ");
-
-  if (arg == NULL) {
-    // syntax error: no argument
-    printf("%s - %s\n", cmd_table[4].name, cmd_table[4].description);
-  } else if (strcmp(arg, "r") == 0) {
-    // print the registers
-    isa_reg_display();
-  } else if (strcmp(arg, "w") == 0) {
-    // print the watchpoints
+  char option = arg[0];
+  if (arg[1] != '\0') option = ' ';
+  switch (option) {
+    case 'r':
+      isa_reg_display();
+      break;
+    case 'w':
+      TODO();
+    default:
+      printf("%s - %s\n", cmd_table[4].name, cmd_table[4].description);
   }
   return 0;
 }
