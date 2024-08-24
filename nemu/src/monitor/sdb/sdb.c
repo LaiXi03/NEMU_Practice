@@ -13,6 +13,7 @@
 * See the Mulan PSL v2 for more details.
 ***************************************************************************************/
 
+#include <ctype.h>
 #include <isa.h>
 #include <cpu/cpu.h>
 #include <readline/readline.h>
@@ -20,6 +21,11 @@
 #include "sdb.h"
 #include "debug.h"
 #include <memory/paddr.h>
+#include <stdbool.h>
+#include <stdint.h>
+#include <stdio.h>
+#include <string.h>
+#include <time.h>
 
 static int is_batch_mode = false;
 
@@ -79,7 +85,7 @@ static struct {
   {"si", "Step one instruction exactly", cmd_si},
   {"info", "Print program status.\n\tinfo r\t\tprint registers' info\n\tinfo w\t\tprint watchpoints' info", cmd_info},
   {"x", "Scan memory", cmd_x},
-  {"p", "Print value of expression", cmd_p},
+  {"p", "Print value of an expression", cmd_p},
   {"w", "Set watchpoint", cmd_w},
   {"d", "Delete watchpoint", cmd_d},
   /* TODO: Add more commands */
@@ -88,6 +94,7 @@ static struct {
 
 #define NR_CMD ARRLEN(cmd_table)
 
+/* Print the help information of the commands. */
 static int cmd_help(char *args) {
   /* extract the first argument */
   char *arg = strtok(NULL, " ");
@@ -111,6 +118,7 @@ static int cmd_help(char *args) {
   return 0;
 }
 
+/* execute instrutions for several times */
 static int cmd_si(char *args) {
   /* extract the first argument */
   char *arg = strtok(NULL, " ");
@@ -120,14 +128,15 @@ static int cmd_si(char *args) {
     cpu_exec(1);
   } else {
     for(int i = 0; i < strlen(arg); i++) {
-      if(arg[i] < '0' || arg[i] > '9') {
+      if(!isdigit(arg[i])) {
         // syntax error: invalid argument
         printf("Invalid argument '%s'\n", arg);
         return 0;
       }
     }
     // transform the string to int
-    int n = atoi(arg);
+    uint64_t n = 0;
+    sscanf(arg, "%"PRIu64, &n);
     // examine the syntax
     if((arg = strtok(NULL, " ")) != NULL) {
       // syntax error: too many arguments
@@ -140,6 +149,7 @@ static int cmd_si(char *args) {
   return 0;
 }
 
+/* show information for the registers or watchpoints */
 static int cmd_info(char *args) {
   /* extract the first argument */
   char *arg = strtok(NULL, " ");
@@ -157,9 +167,11 @@ static int cmd_info(char *args) {
   return 0;
 }
 
+/* scan some word size data frow memory */
 static int cmd_x(char *args) {
+  char *arg_end = args + strlen(args);
   /* extract the first argument */
-  char *arg = strtok(NULL, " ");
+  char *arg = strtok(args, " ");
 
   if (arg == NULL) {
     // syntax error: no argument
@@ -167,36 +179,60 @@ static int cmd_x(char *args) {
   } else {
     // test the first argument
     for(int i = 0; i < strlen(arg); i++) {
-      if(arg[i] < '0' || arg[i] > '9') {
+      if(!isdigit(arg[i])) {
         // syntax error: invalid argument
         printf("Invalid argument '%s'\n", arg);
         return 0;
       }
     }
     // transform the string to int
-    word_t n = strtoul(arg, NULL, 10);
+    uint32_t n = 0;
+    sscanf(arg, "%u", &n);
     // test the second argument
     // the second argument should be an expression
-    // assume that the format is 0x????????
-    char *exp = strtok(NULL, " ");
-      // transform the expression to a number
-      // bool success = true;
-      // word_t addr = expr(exp, &success);
-    word_t mem_data = 0, addr = 0;
-    sscanf(exp, "0x%x", &addr);
-    for(int i = 0; i < n; i++) {
-      // print the memory
-      mem_data = paddr_read(addr, 4);
-      printf("0x%.8x: 0x%.8x\n", addr, mem_data);
-      addr += 4;
+    char *expression = arg + strlen(arg) + 1;
+    if (expression > arg_end) {
+      expression = NULL;
+      printf("Please give the address you want to scan.\n");
+    } {
+      bool status = true;
+      uint32_t addr = 0;
+      addr = expr(expression, &status);
+      if (!status) {
+        // syntax error: invalid expression
+        printf("Invalid expression '%s'\n", expression);
+      }
+      word_t mem_data = 0;
+      for(int i = 0; i < n; i++) {
+        // print the memory
+        mem_data = paddr_read(addr, 4);
+        printf("0x%.8x: 0x%.8x\n", addr, mem_data);
+        addr += 4;
+      }
     }
   }
   return 0;
 }
 
 static int cmd_p(char *args) {
-  /* extract the first argument */
   // char *arg = strtok(NULL, " ");
+  if (args == NULL) {
+    // syntax error: no argument
+    printf("Can\'t find an expression!");
+  } else {
+    // test the expression
+    // bool success = true;
+    // word_t res = expr(expr, &success);
+    word_t res = 0;
+    bool success = true;
+    res = expr(args, &success);
+    if (!success) {
+      // syntax error: invalid expression
+      printf("Invalid expression '%s'\n", args);
+    } else {
+      printf("Expression Value: 0x%.8x\t%u\n", res, res);
+    }
+  }
   return 0;
 }
 

@@ -14,7 +14,9 @@
 ***************************************************************************************/
 
 #include <isa.h>
+#include <string.h>
 #include "local-include/reg.h"
+#include "debug.h"
 
 const char *regs[] = {
   "$0", "ra", "sp", "gp", "tp", "t0", "t1", "t2",
@@ -24,13 +26,20 @@ const char *regs[] = {
 };
 
 void isa_reg_display() {
-  printf("reg: value\t\tunsigned\n");
   // print th register values
   for (int i = 0; i < MUXDEF(CONFIG_RVE, 16, 32); i++) {
-    printf("%-3s: 0x%08x\t\t%-10u\n", regs[i], gpr(i), gpr(i));
+    printf("%-3s: 0x%-8x\t%-10u\n", regs[i], gpr(i), gpr(i));
   }
 }
 
 word_t isa_reg_str2val(const char *s, bool *success) {
+  Assert(strlen(s) == 3 || strlen(s) == 4, "Unknown reg name.");
+  for (int i = 0; i < MUXDEF(CONFIG_RVE, 16, 32); i++) {
+    if (strcmp(regs[i], s + 1) == 0) {
+      *success = true;
+      return gpr(i);
+    }
+  }
+  *success = false;
   return 0;
 }
