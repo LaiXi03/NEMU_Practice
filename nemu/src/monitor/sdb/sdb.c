@@ -130,7 +130,7 @@ static int cmd_si(char *args) {
     for(int i = 0; i < strlen(arg); i++) {
       if(!isdigit(arg[i])) {
         // syntax error: invalid argument
-        printf("Invalid argument '%s'\n", arg);
+        printf("Syntax error: invalid argument '%s'\n", arg);
         return 0;
       }
     }
@@ -140,7 +140,7 @@ static int cmd_si(char *args) {
     // examine the syntax
     if((arg = strtok(NULL, " ")) != NULL) {
       // syntax error: too many arguments
-      printf("A syntax error in expression: too many arguments\n");
+      printf("Syntax error: too many arguments\n");
     } else {
       // exec n commands
       cpu_exec(n);
@@ -181,7 +181,7 @@ static int cmd_x(char *args) {
     for(int i = 0; i < strlen(arg); i++) {
       if(!isdigit(arg[i])) {
         // syntax error: invalid argument
-        printf("Invalid argument '%s'\n", arg);
+        printf("Syntax error: invalid argument '%s'\n", arg);
         return 0;
       }
     }
@@ -193,14 +193,14 @@ static int cmd_x(char *args) {
     char *expression = arg + strlen(arg) + 1;
     if (expression > arg_end) {
       expression = NULL;
-      printf("Please give the address you want to scan.\n");
+      printf("Syntax error: expect an address or an expression");
     } {
       bool status = true;
       uint32_t addr = 0;
       addr = expr(expression, &status);
       if (!status) {
         // syntax error: invalid expression
-        printf("Invalid expression '%s'\n", expression);
+        printf("Syntax error: invalid expression '%s'\n", expression);
       }
       word_t mem_data = 0;
       for(int i = 0; i < n; i++) {
@@ -218,7 +218,7 @@ static int cmd_p(char *args) {
   // char *arg = strtok(NULL, " ");
   if (args == NULL) {
     // syntax error: no argument
-    printf("Can\'t find an expression!");
+    printf("Syntax error: expect an expression");
   } else {
     // test the expression
     // bool success = true;
@@ -228,7 +228,7 @@ static int cmd_p(char *args) {
     res = expr(args, &success);
     if (!success) {
       // syntax error: invalid expression
-      printf("Invalid expression '%s'\n", args);
+      printf("Syntax error: invalid expression '%s'\n", args);
     } else {
       printf("Expression Value: 0x%.8x\t%u\n", res, res);
     }
@@ -236,9 +236,10 @@ static int cmd_p(char *args) {
   return 0;
 }
 
-static int cmd_w(char *args) {
-  /* extract the first argument */
-  // char *arg = strtok(NULL, " ");
+static int cmd_w(char *arg) {
+  if (arg == NULL) {
+    printf("Syntax error: expect an expression");
+  }
   return 0;
 }
 
