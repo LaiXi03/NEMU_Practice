@@ -53,5 +53,8 @@ $(BINARY):: $(OBJS) $(ARCHIVES)
 	@echo + LD $@
 	@$(LD) -o $@ $(OBJS) $(LDFLAGS) $(ARCHIVES) $(LIBS)
 
+test:
+	./build/riscv32-nemu-interpreter
+
 clean:
 	-rm -rf $(BUILD_DIR)

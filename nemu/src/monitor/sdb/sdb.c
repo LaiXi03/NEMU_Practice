@@ -13,11 +13,19 @@
 * See the Mulan PSL v2 for more details.
 ***************************************************************************************/
 
+#include <ctype.h>
 #include <isa.h>
 #include <cpu/cpu.h>
 #include <readline/readline.h>
 #include <readline/history.h>
 #include "sdb.h"
+#include "debug.h"
+#include <memory/paddr.h>
+#include <stdbool.h>
+#include <stdint.h>
+#include <stdio.h>
+#include <string.h>
+#include <time.h>
 
 static int is_batch_mode = false;
 
@@ -54,6 +62,18 @@ static int cmd_q(char *args) {
 
 static int cmd_help(char *args);
 
+static int cmd_si(char *args);
+
+static int cmd_info(char *args);
+
+static int cmd_x(char *args);
+
+static int cmd_p(char *args);
+
+static int cmd_w(char *args);
+
+static int cmd_d(char *args);
+
 static struct {
   const char *name;
   const char *description;
@@ -62,13 +82,17 @@ static struct {
   { "help", "Display information about all supported commands", cmd_help },
   { "c", "Continue the execution of the program", cmd_c },
   { "q", "Exit NEMU", cmd_q },
-
-  /* TODO: Add more commands */
-
+  {"si", "Step default one instruction exactly.\n\tsi N\t\tstep instruction N times", cmd_si},
+  {"info", "Print program status.\n\tinfo r\t\tprint registers' info\n\tinfo w\t\tprint watchpoints' info", cmd_info},
+  {"x", "Scan memory.\n\tx N expr\t\tshow N word size bytes start from the address(the EXPR value)", cmd_x},
+  {"p", "Print value of an expression.\n\tp Expr", cmd_p},
+  {"w", "Set watchpoint for an expression.\n\tw Expr", cmd_w},
+  {"d", "Delete watchpoint\n\td N\t\tN -the number of the watchpoint", cmd_d},
 };
 
 #define NR_CMD ARRLEN(cmd_table)
 
+/* Print the help information of the commands. */
 static int cmd_help(char *args) {
   /* extract the first argument */
   char *arg = strtok(NULL, " ");
@@ -89,6 +113,151 @@ static int cmd_help(char *args) {
     }
     printf("Unknown command '%s'\n", arg);
   }
+  return 0;
+}
+
+/* execute instrutions for several times */
+static int cmd_si(char *args) {
+  /* extract the first argument */
+  char *arg = strtok(NULL, " ");
+
+  if (arg == NULL) {
+    // exec one command
+    cpu_exec(1);
+  } else {
+    for(int i = 0; i < strlen(arg); i++) {
+      if(!isdigit(arg[i])) {
+        // syntax error: invalid argument
+        printf("Syntax error: invalid argument '%s'\n", arg);
+        return 0;
+      }
+    }
+    // transform the string to int
+    uint64_t n = 0;
+    sscanf(arg, "%"PRIu64, &n);
+    // examine the syntax
+    if((arg = strtok(NULL, " ")) != NULL) {
+      // syntax error: too many arguments
+      printf("Syntax error: too many arguments\n");
+    } else {
+      // exec n commands
+      cpu_exec(n);
+    }
+  }
+  return 0;
+}
+
+/* show information for the registers or watchpoints */
+static int cmd_info(char *args) {
+  /* extract the first argument */
+  char *arg = strtok(NULL, " ");
+  char option = arg[0];
+  if (arg[1] != '\0') option = ' ';
+  switch (option) {
+    case 'r':
+      isa_reg_display();
+      break;
+    case 'w':
+      show_wp();
+      break;
+    default:
+      printf("%s - %s\n", cmd_table[4].name, cmd_table[4].description);
+  }
+  return 0;
+}
+
+/* scan some word size data frow memory */
+static int cmd_x(char *args) {
+  char *arg_end = args + strlen(args);
+  /* extract the first argument */
+  char *arg = strtok(args, " ");
+
+  if (arg == NULL) {
+    // syntax error: no argument
+    printf("%s - %s\n", cmd_table[5].name, cmd_table[5].description);
+  } else {
+    // test the first argument
+    for(int i = 0; i < strlen(arg); i++) {
+      if(!isdigit(arg[i])) {
+        // syntax error: invalid argument
+        printf("Syntax error: invalid argument '%s'\n", arg);
+        return 0;
+      }
+    }
+    // transform the string to int
+    uint32_t n = 0;
+    sscanf(arg, "%u", &n);
+    // test the second argument
+    // the second argument should be an expression
+    char *expression = arg + strlen(arg) + 1;
+    if (expression > arg_end) {
+      expression = NULL;
+      printf("Syntax error: expect an address or an expression");
+    } {
+      bool status = true;
+      uint32_t addr = 0;
+      addr = expr(expression, &status);
+      if (!status) {
+        // syntax error: invalid expression
+        printf("Syntax error: invalid expression '%s'\n", expression);
+      }
+      word_t mem_data = 0;
+      for(int i = 0; i < n; i++) {
+        // print the memory
+        mem_data = paddr_read(addr, 4);
+        printf("0x%.8x: 0x%.8x\n", addr, mem_data);
+        addr += 4;
+      }
+    }
+  }
+  return 0;
+}
+
+static int cmd_p(char *args) {
+  // char *arg = strtok(NULL, " ");
+  if (args == NULL) {
+    // syntax error: no argument
+    printf("Syntax error: expect an expression");
+  } else {
+    // test the expression
+    // bool success = true;
+    // word_t res = expr(expr, &success);
+    word_t res = 0;
+    bool success = true;
+    res = expr(args, &success);
+    if (!success) {
+      // syntax error: invalid expression
+      printf("Syntax error: invalid expression '%s'\n", args);
+    } else {
+      printf("Expression Value: 0x%.8x\t%u\n", res, res);
+    }
+  }
+  return 0;
+}
+
+/* set a watchpoint for an expression */
+static int cmd_w(char *arg) {
+  if (arg == NULL) {
+    printf("Syntax error: expect an expression");
+    return 0;
+  }
+  WP *wp = new_wp(arg);
+  printf("watchpoint %d: %s\n", wp->NO, wp->expr);
+  return 0;
+}
+
+/* delete a watchpoint by the number of wp */
+static int cmd_d(char *wp_no) {
+  int i;
+  if (wp_no == NULL || !sscanf(wp_no, "%d", &i)) {
+    printf("Syntax error: expect the index of the watchpoint\n");
+    return 0;
+  }
+  WP *tmp = malloc(sizeof(WP));
+  Assert(tmp != NULL, "malloc failed");
+  tmp->NO = i;
+  free_wp(tmp);
+  free(tmp);
   return 0;
 }
 
