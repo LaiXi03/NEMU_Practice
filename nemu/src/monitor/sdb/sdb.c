@@ -82,14 +82,12 @@ static struct {
   { "help", "Display information about all supported commands", cmd_help },
   { "c", "Continue the execution of the program", cmd_c },
   { "q", "Exit NEMU", cmd_q },
-  {"si", "Step one instruction exactly", cmd_si},
+  {"si", "Step default one instruction exactly.\n\tsi N\t\tstep instruction N times", cmd_si},
   {"info", "Print program status.\n\tinfo r\t\tprint registers' info\n\tinfo w\t\tprint watchpoints' info", cmd_info},
-  {"x", "Scan memory", cmd_x},
-  {"p", "Print value of an expression", cmd_p},
-  {"w", "Set watchpoint", cmd_w},
-  {"d", "Delete watchpoint", cmd_d},
-  /* TODO: Add more commands */
-
+  {"x", "Scan memory.\n\tx N expr\t\tshow N word size bytes start from the address(the EXPR value)", cmd_x},
+  {"p", "Print value of an expression.\n\tp Expr", cmd_p},
+  {"w", "Set watchpoint for an expression.\n\tw Expr", cmd_w},
+  {"d", "Delete watchpoint\n\td N\t\tN -the number of the watchpoint", cmd_d},
 };
 
 #define NR_CMD ARRLEN(cmd_table)
@@ -160,7 +158,8 @@ static int cmd_info(char *args) {
       isa_reg_display();
       break;
     case 'w':
-      TODO();
+      show_wp();
+      break;
     default:
       printf("%s - %s\n", cmd_table[4].name, cmd_table[4].description);
   }
@@ -236,16 +235,29 @@ static int cmd_p(char *args) {
   return 0;
 }
 
+/* set a watchpoint for an expression */
 static int cmd_w(char *arg) {
   if (arg == NULL) {
     printf("Syntax error: expect an expression");
+    return 0;
   }
+  WP *wp = new_wp(arg);
+  printf("watchpoint %d: %s\n", wp->NO, wp->expr);
   return 0;
 }
 
-static int cmd_d(char *args) {
-  /* extract the first argument */
-  // char *arg = strtok(NULL, " ");
+/* delete a watchpoint by the number of wp */
+static int cmd_d(char *wp_no) {
+  int i;
+  if (wp_no == NULL || !sscanf(wp_no, "%d", &i)) {
+    printf("Syntax error: expect the index of the watchpoint\n");
+    return 0;
+  }
+  WP *tmp = malloc(sizeof(WP));
+  Assert(tmp != NULL, "malloc failed");
+  tmp->NO = i;
+  free_wp(tmp);
+  free(tmp);
   return 0;
 }
 

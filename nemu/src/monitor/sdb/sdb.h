@@ -15,10 +15,32 @@
 
 #ifndef __SDB_H__
 #define __SDB_H__
-
+#define MAX_EXPRESSION_LENGTH 65536
 #include <common.h>
 
+typedef struct watchpoint {
+  int NO;
+  struct watchpoint *next;
+
+  char *expr;
+  int hit_times;
+  uint32_t old_value, new_value;
+  /* TODO: Add more members if necessary */
+
+} WP;
+
 void init_regex();
+
+void init_wp_pool();
+
+void show_wp();
+
+WP *new_wp(char *expr);
+
+void free_wp(WP *wp);
+
+void scan_wp(bool *flag);
+
 word_t expr(char *e, bool *success);
 
 #endif
