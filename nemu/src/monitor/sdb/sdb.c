@@ -20,7 +20,7 @@
 #include <readline/history.h>
 #include "sdb.h"
 #include "debug.h"
-#include <memory/paddr.h>
+#include <memory/vaddr.h>
 #include <stdbool.h>
 #include <stdint.h>
 #include <stdio.h>
@@ -201,10 +201,10 @@ static int cmd_x(char *args) {
         // syntax error: invalid expression
         printf("Syntax error: invalid expression '%s'\n", expression);
       }
-      word_t mem_data = 0;
+      uint32_t mem_data = 0;
       for(int i = 0; i < n; i++) {
-        // print the memory
-        mem_data = paddr_read(addr, 4);
+        // read and print the memory
+        mem_data = vaddr_read(addr, 4);
         printf("0x%.8x: 0x%.8x\n", addr, mem_data);
         addr += 4;
       }
@@ -221,8 +221,7 @@ static int cmd_p(char *args) {
   } else {
     // test the expression
     // bool success = true;
-    // word_t res = expr(expr, &success);
-    word_t res = 0;
+    uint32_t res = 0;
     bool success = true;
     res = expr(args, &success);
     if (!success) {

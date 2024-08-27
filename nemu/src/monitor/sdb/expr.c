@@ -25,7 +25,7 @@
 #include <stdint.h>
 #include <stdio.h>
 #include <string.h>
-#include "memory/paddr.h"
+#include "memory/vaddr.h"
 #include "sdb.h"
 
 enum {
@@ -319,7 +319,7 @@ static uint32_t eval(int p, int q, bool *success) {
                   Log("Unexpected value when calculate the address.");
                   return 0;
                 }
-                mem_data = paddr_read(addr, 4);
+                mem_data = vaddr_read(addr, 4);
                 return mem_data;
               }
             default:
