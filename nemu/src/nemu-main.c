@@ -29,19 +29,17 @@ void engine_start();
 int is_exit_status_bad();
 
 int main(int argc, char *argv[]) {
+  /* Initialize the monitor. */
+#ifdef CONFIG_TARGET_AM
+  am_init_monitor();
+#else
+  init_monitor(argc, argv);
+#endif 
+
   /* test the expr function */
   // read test data from ../tools/gen-expr/input
-  init_regex();
   FILE *fp = fopen("./tools/gen-expr/input", "r");
   Assert(fp != NULL, "Can not open input file\n");
-  // char expr_str[65536] = {'\0'};
-  // uint32_t result = 0;
-  // while (fscanf(fp, "%u %[^\n]s", &result, expr_str) != EOF) {
-  //   bool eval_status = true;
-  //   uint32_t res = expr(expr_str, &eval_status);
-  //   Assert(res == result && eval_status, "Test failed: %s, expect %u, but got %u\n", expr_str, result, res);
-  //   expr_str[0] = '\0';
-  // }
   char line_str[65536];
   line_str[0] = '\0';
   uint32_t result = 0;
@@ -68,16 +66,10 @@ int main(int argc, char *argv[]) {
   Log("passed cnt: %d\n", passed_cnt);
   int ret = fclose(fp);
   Assert(ret == 0, "Close file failed\n");
-
-  /* Initialize the monitor. */
-#ifdef CONFIG_TARGET_AM
-  am_init_monitor();
-#else
-  init_monitor(argc, argv);
-#endif
-
   /* Start engine. */
   engine_start();
+
+  free_regex();
 
   return is_exit_status_bad();
 }

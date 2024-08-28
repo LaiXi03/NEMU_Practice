@@ -25,11 +25,11 @@ typedef struct watchpoint {
   char *expr;
   int hit_times;
   uint32_t old_value, new_value;
-  /* TODO: Add more members if necessary */
 
 } WP;
 
 void init_regex();
+void free_regex();
 
 void init_wp_pool();
 
