@@ -1,9 +1,11 @@
 #include <am.h>
+#include <stdint.h>
 #include <klib.h>
 #include <klib-macros.h>
 
 #if !defined(__ISA_NATIVE__) || defined(__NATIVE_USE_KLIB__)
 static unsigned long int next = 1;
+static uint8_t *p = NULL;
 
 int rand(void) {
   // RAND_MAX assumed to be 32767
@@ -33,8 +35,21 @@ void *malloc(size_t size) {
   // On native, malloc() will be called during initializaion of C runtime.
   // Therefore do not call panic() here, else it will yield a dead recursion:
   //   panic() -> putchar() -> (glibc) -> malloc() -> panic()
+  // TODO: to be implement
 #if !(defined(__ISA_NATIVE__) && defined(__NATIVE_USE_KLIB__))
-  panic("Not implemented");
+  if (size == 0) return NULL;
+  if (p == NULL) {
+    // 初始化堆区指针
+    p = (uint8_t *)heap.start;
+  }
+  if ((uint8_t *)heap.end - p < size) {
+    return NULL;
+  }
+  uint8_t *ret = p;
+  p += size;
+  
+  return ret;
+  
 #endif
   return NULL;
 }
