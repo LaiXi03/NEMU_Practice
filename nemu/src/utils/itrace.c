@@ -1,5 +1,4 @@
-#include "debug.h"
-#include <common.h>
+#include <trace.h>
 #include <stdint.h>
 
 #define MAX_IRINGBUF 20

@@ -13,16 +13,15 @@
 * See the Mulan PSL v2 for more details.
 ***************************************************************************************/
 
+#include "macro.h"
 #include <utils.h>
+#include <trace.h>
 
 NEMUState nemu_state = { .state = NEMU_STOP };
 
 int is_exit_status_bad() {
   int good = (nemu_state.state == NEMU_END && nemu_state.halt_ret == 0) ||
     (nemu_state.state == NEMU_QUIT);
-    #ifdef CONFIG_ITRACE
-      void show_iringbuf();
-      if (!good) show_iringbuf();
-    #endif
+  IFDEF(CONFIG_ITRACE, if (!good) show_iringbuf());
   return !good;
 }

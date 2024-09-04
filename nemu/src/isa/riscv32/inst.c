@@ -20,6 +20,7 @@
 #include <cpu/ifetch.h>
 #include <cpu/decode.h>
 #include <stdint.h>
+#include <trace.h>
 
 #define R(i) gpr(i)
 #define Mr vaddr_read
@@ -138,9 +139,6 @@ static int decode_exec(Decode *s) {
 
 int isa_exec_once(Decode *s) {
   s->isa.inst.val = inst_fetch(&s->snpc, 4);
-  #ifdef CONFIG_ITRACE
-    void write_iringbuf(word_t pc, uint32_t inst);
-    write_iringbuf(s->pc, s->isa.inst.val);
-  #endif
+  IFDEF(CONFIG_ITRACE, write_iringbuf(s->pc, s->isa.inst.val));
   return decode_exec(s);
 }
