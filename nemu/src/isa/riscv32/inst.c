@@ -124,8 +124,12 @@ static int decode_exec(Decode *s) {
   INSTPAT("0000001 ????? ????? 111 ????? 01100 11", remu   , R, R(rd) = src1 % src2);
 
   // jump
-  INSTPAT("??????? ????? ????? ??? ????? 11011 11", jal    , J, R(rd) = s->pc + 4; s->dnpc = s->pc + imm);
-  INSTPAT("??????? ????? ????? 000 ????? 11001 11", jalr   , I, R(rd) = s->pc + 4; s->dnpc = src1 + imm; s->dnpc = s->dnpc & ~1);
+  INSTPAT("??????? ????? ????? ??? ????? 11011 11", jal    , J, R(rd) = s->pc + 4; s->dnpc = s->pc + imm; 
+                                                                    IFDEF(CONFIG_FTRACE, if (rd == 1) ftrace_call(s->pc, s->dnpc);));
+  INSTPAT("??????? ????? ????? 000 ????? 11001 11", jalr   , I, R(rd) = s->pc + 4; s->dnpc = src1 + imm; s->dnpc = s->dnpc & ~1; 
+                                                                    IFDEF(CONFIG_FTRACE, 
+                                                                      if (rd == 1) ftrace_call(s->pc, s->dnpc);
+                                                                      else if (rd == 0 && src1 == R(1)) ftrace_ret(s->pc);));
 
   INSTPAT("0000000 00001 00000 000 00000 11100 11", ebreak , N, NEMUTRAP(s->pc, R(10))); // R(10) is $a0
   // INSTPAT("0000000 00000 ????? 000 ????? 11100 11", ecall, I, ); // TODO
