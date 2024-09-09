@@ -54,33 +54,104 @@ static int itoa(int value, char *buf, int base) {
   return i;
 }
 
+#define PRINTF_BUFFER_LENGTH 4096
 int printf(const char *fmt, ...) {
-  panic("Not implemented");
-}
+  char buffer[PRINTF_BUFFER_LENGTH];
+  va_list ap;
+  va_start(ap, fmt);
+  int cnt = vsprintf(buffer, fmt, ap);
+  int i = 0;
+  while(buffer[i] != '\0') {
+    putch(buffer[i]);
+    i++;
+  }
+  return cnt;
 
+}
+#undef PRINTF_BUFFER_LENGTH
+
+// static void strcpyf(char *dst, const char *src, int width) {
+//   int len = strlen(dst);
+//   int i = 0;
+//   while (src[i] != '\0') {
+//     dst[len + i] = src[i];
+//     i++;
+//   }
+//   while (i < width) {
+//     dst[len + i] = ' ';
+//     i++;
+//   }
+//   dst[len + i] = '\0';
+// }
+
+#define PRINTF_STATE_NORMAL 0
+#define PRINTF_STATE_FORMAT 1
 int vsprintf(char *out, const char *fmt, va_list ap) {
   char *ret = out;
-  for (int i = 0; i < strlen(fmt); i++) {
-    if (fmt[i] != '%') {
-      *ret = fmt[i];
-      ret++;
-    } else {
-      switch (fmt[i + 1]) {
-        case '\0': // FIXME
-          break;
-        case 'd':
-          ret += itoa(va_arg(ap, int), ret, 10);
-          break;
-        case 's': {
-          char *s = va_arg(ap, char *);
-          strcpy(ret, s);
-          ret += strlen(ret);
-          break;
+  int state = PRINTF_STATE_NORMAL;
+  int width = 0;
+  for (int i = 0, j = 0; fmt[i] != '\0'; i++) {
+    switch (state) {
+      case(PRINTF_STATE_NORMAL): {
+        if (fmt[i] == '%') {
+          state = PRINTF_STATE_FORMAT;
+        } else {
+          *ret = fmt[i];
+          ret++;
         }
-        default:
-          panic("Not implemented");
+        break;
       }
-      i++;
+      case(PRINTF_STATE_FORMAT): {
+        switch (fmt[i]) {
+          case 'd': {
+            int value = va_arg(ap, int);
+            ret += itoa(value, ret, 10);
+            state = PRINTF_STATE_NORMAL;
+            break;
+          }
+          case 'x': {
+            int value = va_arg(ap, int);
+            ret += itoa(value, ret, 16);
+            state = PRINTF_STATE_NORMAL;
+            break;
+          }
+          case 's': {
+            char *s = va_arg(ap, char *);
+            strcpy(ret, s);
+            ret += strlen(ret);
+            state = PRINTF_STATE_NORMAL;
+            break;
+          }
+          case 'c': {
+            char t = va_arg(ap, int);
+            ret[0] = t;
+            ret += 1;
+            state = PRINTF_STATE_NORMAL;
+            break;
+          }
+          case '%': {
+            *ret = '%';
+            ret++;
+            state = PRINTF_STATE_NORMAL;
+            break;
+          }
+          case '0': {
+            for (j = i + 1; fmt[j] != 'd' && fmt[j] != 's' && fmt[j] != 'c' && fmt[j] != 'x'; j++) {
+              width = width * 10 + fmt[j] - '0';
+              i++;
+            }
+            break;
+          }
+          default: {
+            // putch(fmt[i]);
+            // panic(" Format Not implemented"); // FIXME
+            *ret = fmt[i];
+            break;
+          }
+        
+        }
+
+      }
     }
   }
   *ret = '\0';

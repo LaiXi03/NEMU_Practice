@@ -48,6 +48,9 @@ void *malloc(size_t size) {
   uint8_t *ret = p;
   p += size;
   
+  // align to 8 bytes
+  p = (uint8_t *)(((uintptr_t)p + 7) & ~7);
+
   return ret;
   
 #endif
